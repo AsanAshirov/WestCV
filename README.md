@@ -15,7 +15,8 @@ Traffic event detection (Part A) and accident anticipation (Part B) for a fixed 
 | `WIUT Hackathon _ CV Track Elimination Task.pdf` | Task description |
 | `Videos.pdf` | Google Drive links to the 4 sample videos (not in the repo, 2-6 GB each) |
 | `WIUT_CV_Track_analysis_RU.md` | Full task analysis and strategy (Russian) |
-| `WIUT_toolkit_RU.md` | Annotation tools, open-source models and datasets catalog (Russian) — added when ready |
+| `WIUT_toolkit_RU.md` | Annotation tools, open-source models and datasets catalog (Russian) |
+| `tools/annotation/` | Annotation converters: Label Studio → ground_truth.json, annotator disagreement report, labelme → scene geometry |
 | `research/reports/` | Raw research and verification reports behind the analysis (English) |
 | `research/scripts/` | Experimental scripts (metric simulations, decode benchmarks, scene registration). Not part of the solution |
 | `CLAUDE.md` | Working context for Claude Code sessions |
