@@ -1,0 +1,41 @@
+# Videos and heavy media (samples are 2-6 GB each; never commit them)
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.mkv
+*.avi
+*.wav
+*.mp3
+samples/
+proxies/
+data/
+
+# Organizer archive (its contents are committed unpacked at the repo root)
+wiut_cv_scripts.zip
+
+# Model weights and caches (ship via weights/download.sh or release assets)
+weights/*.pt
+weights/*.pth
+weights/*.onnx
+weights/*.engine
+runs/
+*.cache
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+
+# Outputs
+/predictions.json
+/report.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
