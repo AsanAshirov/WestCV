@@ -16,6 +16,7 @@ Traffic event detection (Part A) and accident anticipation (Part B) for a fixed 
 | `Videos.pdf` | Google Drive links to the 4 sample videos (not in the repo, 2-6 GB each) |
 | `WIUT_CV_Track_analysis_RU.md` | Full task analysis and strategy (Russian) |
 | `WIUT_toolkit_RU.md` | Annotation tools, open-source models and datasets catalog (Russian) |
+| `docs/WestCV_plan_RU.pdf` | Consolidated plan (Russian, 44 pages): findings, architecture, annotation, datasets with links, milestones. Source and build script in `docs/plan/` (`python docs/plan/build.py`) |
 | `tools/annotation/` | Annotation converters: Label Studio → ground_truth.json, annotator disagreement report, labelme → scene geometry |
 | `research/reports/` | Raw research and verification reports behind the analysis (English) |
 | `research/scripts/` | Experimental scripts (metric simulations, decode benchmarks, scene registration). Not part of the solution |
