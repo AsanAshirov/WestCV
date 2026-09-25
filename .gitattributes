@@ -3,3 +3,5 @@
 *.zip binary
 *.png binary
 *.jpg binary
+*.pt binary
+*.npz binary
