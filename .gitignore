@@ -10,9 +10,15 @@
 samples/
 proxies/
 data/
+datasets/
 
-# Organizer archive (its contents are committed unpacked at the repo root)
-wiut_cv_scripts.zip
+# Dataset archives (datasets are downloaded locally, never committed)
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.zip
 
 # Model weights and caches (ship via weights/download.sh or release assets)
 weights/*.pt
