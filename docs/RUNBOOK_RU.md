@@ -163,16 +163,28 @@ python tools/run_rules.py --cache cache --out dev_pred.json --gt dev_labels/dev_
 
 Всё, что использовали для обучения или проверки, записать в README (датасет и лицензия). Класс `fire_smoke` включать, только если на всех 4 сэмплах **ноль** ложных срабатываний.
 
-## 10. Прогон на Kaggle T4 (обязательно до сдачи)
+## 10. Прогон на Kaggle T4 (обязательно до сдачи) — одной командой, всё приватно
 
-1. Загрузить 1–2 сэмпла приватным датасетом (`wiut-samples`). Репозиторий должен быть публичным, чтобы клонировать его в ноутбук.
-2. Ноутбук: Accelerator = GPU T4, Internet = On (только на время установки).
-   ```bash
-   !git clone https://github.com/AsanAshirov/WestCV && cd WestCV && git checkout <ветка или тег>
-   !cd WestCV && pip install -r requirements.txt && python -m pytest -q tests
-   !cd WestCV && python run_submission.py --videos /kaggle/input/wiut-samples --out /kaggle/working/pred.json --team Antigradient
-   ```
-3. Проверить `log` и `total_sec / duration`. **Финальный `predictions_samples.json` генерировать на T4 с финального коммита.**
+`kaggle/push.sh` загружает код (только закоммиченные файлы) **приватным** датасетом `antigradient-code` и запускает **приватное** GPU-ядро `antigradient-samples-t4`. Ядро выполняет `kaggle/run_samples.py`:
+установка → тесты → замер времени → официальный харнесс на всех сэмплах → `--validate-only` → кэш детекций → review-видео.
+
+```bash
+pip install kaggle                          # токен: ~/.kaggle/access_token (Windows: %USERPROFILE%\.kaggle\access_token)
+KAGGLE_USER=<ваш_логин> bash kaggle/push.sh                          # видео ядро скачает само по ссылкам организаторов
+KAGGLE_USER=<ваш_логин> SAMPLES_DIR=DataSets bash kaggle/push.sh     # если Drive отдаёт «Quota exceeded»: загрузить свои (~20 ГБ, долго)
+kaggle kernels status <ваш_логин>/antigradient-samples-t4
+kaggle kernels output <ваш_логин>/antigradient-samples-t4 -p kaggle_out
+```
+
+- На Windows запускать в Git Bash.
+- Для интернета в ядре аккаунт Kaggle должен быть подтверждён по телефону.
+- В `kaggle_out/` будут:
+  - `summary.json` — время каждого шага и **`x_duration` = total_sec / duration для каждого видео** (цель ≤ 2.5);
+  - `predictions_samples.json`;
+  - `cache/*.npz` — положить в `cache/` для подбора порогов (§7);
+  - `review/*_review.mp4` — review-видео для разметки (§6) и для сайта.
+- **Финальный `predictions_samples.json` брать из прогона финального коммита.**
+- Ничего не публиковать: датасеты создаются без `--public`, ядро с `is_private: true`.
 
 ## 11. Сдача (до 21:00 воскресенья)
 

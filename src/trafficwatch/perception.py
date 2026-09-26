@@ -75,6 +75,7 @@ def perceive(meta: VideoMeta, detector: Detector, cfg: dict, deadline: float | N
         idxs.clear()
 
     source = iter_frames(meta, stride, w, dcfg["backend"], tuple(dcfg.get("ffmpeg_input_args") or ()))
+    batch_start = time.perf_counter()
     with contextlib.closing(source):
         for idx, frame in source:
             brightness.append(float(frame[::4, ::4].mean()))
@@ -86,9 +87,12 @@ def perceive(meta: VideoMeta, detector: Detector, cfg: dict, deadline: float | N
                 flush()
                 if on_progress and meta.n_frames:
                     on_progress(min(1.0, idx / meta.n_frames))
-                if deadline is not None and time.perf_counter() > deadline:
+                now = time.perf_counter()
+                # stop if the next batch (decode + detect, as long as this one) would end past the deadline
+                if deadline is not None and now + (now - batch_start) > deadline:
                     complete = False
                     break
+                batch_start = now
     if frames:
         flush()
     dets = np.vstack(rows) if rows else np.zeros((0, 7), np.float32)

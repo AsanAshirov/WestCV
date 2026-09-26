@@ -34,6 +34,7 @@
 | `rules/*.py` | По модулю на класс: `stopped_vehicle`, `jaywalking`, `wrong_way`, `congestion`, `accident` |
 | `postprocess.py` | union → gap-merge → min-dur → санитайзер (3 знака, end ≤ floor(duration), без перекрытий) |
 | `pipeline.py` | Part A: бюджет `T_A = (3 − 1.25·h − 0.25)·dur` по замеру цикла харнесса, затем perception → analyze |
+| `viz.py` | Отрисовка для review-видео, демо и сайта; H.264 через ffmpeg |
 | `risk.py` | Part B: своя детекция YOLO26n@640 ~10 Гц, TTC пар, два канала (≤0.4999 ранжирование, ≥0.5 тревога ≤ 8 с). Без CUDA выключается. Следит за дедлайном |
 
 Классы, которые не реализованы (`near_miss`, `red_light`, `stop_line`, `failure_to_yield`, `solid_line_crossing`, `illegal_turn`, `illegal_u_turn`, `road_obstacle`, `fire_smoke`), не предсказываются. Добавлять класс только после проверки ложных срабатываний на всех 4 сэмплах: ложный класс стоит дороже пропущенного.
@@ -50,7 +51,11 @@ python tools/make_reference_frame.py DataSets/C3896.MP4 --out geometry/ref_C3896
 python run_submission.py --videos DataSets --out predictions_samples.json --team Antigradient
 python evaluate.py --pred predictions_samples.json --validate-only
 ```
-Альтернативный конфиг: `TW_CONFIG=path/to.yaml` или `run_rules.py --config`.
+Альтернативный конфиг: `TW_CONFIG=path/to.yaml` или `run_rules.py --config` (конфиг может начинаться с `extends: pipeline.yaml`).
+
+- **Kaggle T4 (приватно):** `KAGGLE_USER=<логин> bash kaggle/push.sh` → ядро `kaggle/run_samples.py` → `kaggle kernels output ... -p kaggle_out` (время, predictions, кэш, review-видео). Датасеты и ядро только приватные. Токен Kaggle никогда не коммитить.
+- **Демо:** `python app/app.py` (Gradio, `configs/demo.yaml`: YOLO26n, 5 к/с, CPU; один проход декодирования кормит детекцию, Part B и превью). Отрисовка общая с `tools/render_review.py` в `src/trafficwatch/viz.py` (H.264 через ffmpeg).
+- Из облачной сессии Claude Code домены `kaggle.com`, `drive.google.com`, `huggingface.co` закрыты сетевой политикой окружения: Kaggle и деплой запускать локально.
 
 ## Правила, которые нельзя нарушать
 - `run_submission.py` и `evaluate.py` **не модифицировать**.
