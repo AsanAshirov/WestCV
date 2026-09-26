@@ -1,0 +1,155 @@
+# Конфигурация конвейера. Все пороги — в секундах и в «размерах бокса» (BS = sqrt(w*h)
+# бокса объекта; у легковой машины 1 BS ≈ 2–3 м, 1 BS/с ≈ 9 км/ч). Никогда не в кадрах.
+# Пороги стартовые: подбирать на своей dev-разметке через tools/run_rules.py.
+seed: 0
+
+decode:
+  backend: auto          # auto (ffmpeg из imageio-ffmpeg, иначе cv2) | ffmpeg | cv2
+  analysis_fps: 10       # сколько кадров в секунду анализирует Part A (29.97 fps -> каждый 3-й)
+  width: 1280            # ширина кадра для детектора; масштабирует сам ffmpeg
+  ffmpeg_input_args: []  # например ["-skip_loop_filter", "all"]: декод 4K быстрее ~10%
+
+detector:                # Part A
+  weights: weights/yolo26m.pt
+  imgsz: 1280
+  conf: 0.15
+  iou: 0.6
+  half: true             # FP16 только на GPU
+  batch: 8
+
+tracker:
+  high_thresh: 0.4
+  low_thresh: 0.15
+  new_thresh: 0.5
+  match_iou: 0.2
+  low_match_iou: 0.4
+  lost_sec: 3.0          # сколько секунд трек живёт без детекций
+  vel_alpha: 0.5
+
+tracks:
+  min_samples: 3
+  min_duration_s: 0.5
+  size_window_s: 1.0
+  smooth_window_s: 0.3
+  velocity_window_s: 0.5
+  heading_min_speed: 0.3 # BS/с: медленнее — направление не определено
+  stop_speed: 0.12       # BS/с: «стоит»
+  stop_window_s: 2.0
+  stop_disp: 0.3         # BS: смещение за stop_window_s меньше этого — «стоит»
+  move_speed: 0.5        # BS/с: «едет»
+  jump_bs: 2.5           # скачок центра больше этого за < jump_max_dt_s — смена ID, режем трек
+  jump_max_dt_s: 0.5
+  stitch_max_gap_s: 30   # склейка стоящего объекта, перекрытого на время (автобусом)
+  stitch_max_dist_bs: 0.5
+
+scene:
+  file: configs/scene.json   # нарисованные полигоны (labelme -> tools/annotation/labelme_to_scene.py); необязателен
+  grid: [128, 72]            # сетка масок дороги/переходов
+  flow_grid: [64, 36]        # сетка поля направлений движения
+  road_source: union         # union: авто-маска по движению ∪ нарисованная; scene: только нарисованная
+  road_min_speed: 0.5
+  road_min_tracks: 2
+  road_box_fraction: 0.5      # нижняя доля бокса машины, считающаяся «следом» на дороге
+  road_close_cells: 2         # морфологическое закрытие дыр между полосами
+  crosswalk_margin_cells: 1
+
+budget:                      # T_A = (3 - part_b_factor*h - margin) * длительность
+  probe_frames: 45           # сколько кадров читаем, чтобы оценить стоимость цикла харнесса h
+  default_h: 1.2
+  part_b_factor: 1.25        # 1.0 = чтение кадров харнессом, +25% на наш step()
+  part_b_off_below: 1.0      # если Part A остаётся меньше 1.0x — выключаем Part B для этого видео
+  harness_only_factor: 1.05  # стоимость цикла харнесса с выключенным Part B
+  margin: 0.25
+  min_factor: 0.3
+  max_factor: 2.0
+
+classes:
+  stopped_vehicle:
+    enabled: true
+    min_stop_s: 10.0
+    gap_s: 2.0
+    min_on_road: 0.7
+    ignore_whole_video: true   # стоит от начала до конца клипа — считаем припаркованным
+    edge_s: 1.0
+    probe_every_s: 1.0
+    neighbour_radius_bs: 8.0
+    same_direction_dot: 0.7
+    min_flow_fraction: 0.3     # мимо проезжает попутный поток хотя бы 30% времени -> это stopped_vehicle
+    queue_fraction: 0.5        # рядом стоят другие машины >= 50% времени -> похоже на очередь
+    queue_max_s: 90.0          # очередь дольше этого — всё равно stopped_vehicle
+    merge_gap_s: 2.0
+    min_duration_s: 10.0
+
+  jaywalking:
+    enabled: true
+    require_crosswalks: true   # без полигонов переходов в scene.json класс выключается сам
+    edge_margin_cells: 1
+    max_carried_fraction: 0.3
+    gap_s: 1.0
+    min_duration_s: 1.0
+    merge_gap_s: 1.0
+
+  wrong_way:
+    enabled: true
+    flow_min_count: 15
+    flow_min_coherence: 0.7
+    opposite_dot: 0.5
+    min_opposite_fraction: 0.8
+    min_path_bs: 4.0
+    gap_s: 1.0
+    min_duration_s: 2.0
+    merge_gap_s: 2.0
+
+  congestion:
+    enabled: true
+    bin_s: 1.0
+    flow_min_count: 15
+    flow_min_coherence: 0.6
+    max_directions: 4
+    min_direction_share: 0.15
+    direction_tolerance_deg: 45
+    min_vehicles: 4
+    crawl_speed: 0.3
+    slow_speed: 0.5
+    min_slow_fraction: 0.7
+    gap_s: 10.0
+    min_duration_s: 60.0       # короче — обычная очередь на красный (гипотеза H1)
+    merge_gap_s: 10.0
+
+  accident:
+    enabled: true              # аварии в тесте вероятны (Part B), класс и так войдёт в среднее
+    pre_speed: 2.0
+    stop_ratio: 0.2
+    max_decel_s: 1.5
+    depth_tolerance: 0.15
+    contact_iou: 0.1
+    closing_window_s: 1.0
+    min_closing_bs: 0.3
+    min_duration_s: 1.0
+    merge_gap_s: 1.0
+    max_duration_s: 30.0
+
+risk:                          # Part B
+  enabled: true
+  require_cuda: true           # на CPU не успеет в бюджет — тогда риск = 0
+  weights: weights/yolo26n.pt
+  imgsz: 640
+  conf: 0.25
+  width: 640
+  fps: 10
+  min_age_s: 0.8
+  max_pair_dist_bs: 6.0
+  horizon_s: 3.0
+  footprint_fraction: 0.3
+  ttc_hi: 2.5
+  ttc_lo: 0.5
+  min_closing_bs: 0.5
+  inconsistent_weight: 0.5
+  alarm_ttc_s: 1.0
+  alarm_min_r: 0.7
+  release_r: 0.3
+  max_alarm_s: 8.0
+  mute_s: 10.0
+  budget_guard: true           # выключать Part B, если прогноз времени выходит за 3x (в демо не нужно)
+  deadline_margin_s: 10.0
+  decay: 0.9

@@ -1,2 +1,15 @@
-numpy>=1.24
-opencv-python-headless>=4.8
+# Python 3.10-3.13, Linux x86_64 or Windows, NVIDIA driver >= 525.
+# CUDA 12.6 wheels: they work with driver >= 525 (the default torch wheel on PyPI is built
+# for CUDA 13 and needs driver >= 580). Turing (T4, GTX 1650) is supported.
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch==2.14.0+cu126
+torchvision==0.29.0+cu126
+ultralytics-opencv-headless==8.4.163   # not "ultralytics": that one pulls opencv-python + libGL
+opencv-python-headless==4.13.0.92      # one OpenCV package only; unpinned would resolve to 5.x
+numpy==2.2.6 ; python_version < "3.11"
+numpy==2.3.5 ; python_version >= "3.11"
+scipy==1.15.3 ; python_version < "3.11"
+scipy==1.16.3 ; python_version >= "3.11"
+lap==0.5.13                            # Ultralytics would try to pip-install it at runtime (offline!)
+PyYAML==6.0.3
+imageio-ffmpeg==0.6.0                  # bundled ffmpeg binary for the fast decode path

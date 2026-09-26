@@ -1,0 +1,13 @@
+# Hugging Face Space (CPU). Same pipeline as the submission, CPU build of torch.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.0+cpu
+torchvision==0.29.0+cpu
+ultralytics-opencv-headless==8.4.163
+opencv-python-headless==4.13.0.92
+numpy==2.3.5
+scipy==1.16.3
+lap==0.5.13
+PyYAML==6.0.3
+imageio-ffmpeg==0.6.0
+plotly==7.1.0
+gradio==6.28.0

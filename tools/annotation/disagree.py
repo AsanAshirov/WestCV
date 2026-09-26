@@ -1,5 +1,7 @@
 # usage: python disagree.py gt_A.json gt_B.json [thr=0.5]
-import json, sys
+import json
+import sys
+
 
 def tiou(a, b):
     i = max(0.0, min(a[1], b[1]) - max(a[0], b[0]))

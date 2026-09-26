@@ -1,0 +1,5 @@
+crosswalk
+carriageway
+sidewalk
+island
+parking

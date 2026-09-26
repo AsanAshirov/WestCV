@@ -1,23 +1,29 @@
 """
-solution.py — the ONLY file a team has to implement.
+solution.py — team Antigradient, WIUT Hackathon 2026, Computer Vision track.
 
 The organizers' harness (run_submission.py) imports this module and calls:
 
     detect_events(video_path)  -> [[start_sec, end_sec, label], ...]    # Part A
-    RiskEstimator().reset(meta); .step(frame, t_sec) -> float           # Part B (optional)
+    RiskEstimator().reset(meta); .step(frame, t_sec) -> float           # Part B
 
-Keep the names and signatures exactly as they are. Everything else — models,
-tracking, rules, helper modules under src/ — is up to you.
-
-Labels must come from CLASSES. You may REMOVE classes you never predict;
-do not add new ids.
+All logic lives in src/trafficwatch (pipeline.py for Part A, risk.py for Part B).
+Models are loaded and warmed up here, at import time, before the harness starts
+its per-video timer. See README.md and docs/RUNBOOK_RU.md.
 """
 from __future__ import annotations
 
-import numpy as np
+import sys
+from pathlib import Path
 
-# Official class ids (14). See the task description for definitions and
-# start/end conventions. Remove entries you never predict; never add.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
+from trafficwatch import env  # noqa: E402,F401  (offline mode before torch/ultralytics)
+
+# isort: split
+from trafficwatch import pipeline, risk  # noqa: E402
+
+# Official class ids (14). Classes we never predict stay in the list: that is allowed
+# and costs nothing; only predicted or ground-truth classes enter Score A.
 CLASSES: list[str] = [
     "accident",            # collision between road users / with a fixed object
     "near_miss",           # sharp braking or swerving to avoid a collision, no contact
@@ -35,69 +41,16 @@ CLASSES: list[str] = [
     "fire_smoke",          # visible fire or smoke from a vehicle or on the road
 ]
 
-# Anticipation horizon used by the metric (seconds). step() should return
-# P(an `accident` starts within the next RISK_HORIZON_SEC seconds).
-RISK_HORIZON_SEC = 5.0
+try:
+    pipeline.warmup()
+    risk.warmup()
+except Exception as exc:  # e.g. missing weights: log it, never crash the harness at import
+    pipeline.log(f"warmup failed: {exc!r}")
 
 
 def detect_events(video_path: str) -> list[list]:
-    """Part A — traffic event detection.
-
-    Args:
-        video_path: path to one .mp4 file. You may open it any way you like
-            (OpenCV, decord, PyAV, ffmpeg), read it several times, sample
-            frames, run batched models — anything goes.
-
-    Returns:
-        A list of events, each ``[start_sec, end_sec, label]`` with
-        ``0 <= start_sec < end_sec <= duration`` (floats, seconds from the
-        first frame) and ``label in CLASSES``. Return ``[]`` if nothing
-        happened. Segments of the same class must not overlap.
-
-    A typical pipeline:
-        1. sample frames (every 2nd–5th frame is usually enough),
-        2. detect road users (YOLO / RT-DETR) and track them (ByteTrack),
-        3. turn trajectories + scene layout (lanes, stop line, crossing)
-           into per-frame flags for each class,
-        4. merge consecutive flags into segments, drop blips < 0.5 s,
-           merge gaps < 1 s,
-        5. optionally re-score `accident` / `near_miss` candidates with a
-           learned clip classifier.
-    """
-    # TODO: replace this stub with your pipeline.
-    return []
+    """Part A: [[start_sec, end_sec, label], ...] for one .mp4."""
+    return pipeline.detect_events(video_path)
 
 
-class RiskEstimator:
-    """Part B — causal accident anticipation (optional, bonus).
-
-    The harness calls ``reset(meta)`` once per video and then ``step`` for
-    EVERY frame, in order. ``step`` must use only the frames it has seen so
-    far: do not open the video file inside this class, and do not reuse
-    Part A results that were computed with access to future frames.
-    """
-
-    def reset(self, meta: dict) -> None:
-        """Called once before the first frame of each video.
-
-        meta = {"video_id": str, "fps": float, "width": int, "height": int,
-                "n_frames": int}
-        """
-        self.meta = meta
-        self.last_score = 0.0
-
-    def step(self, frame: np.ndarray, t_sec: float) -> float:
-        """Return P(accident starts within the next RISK_HORIZON_SEC s).
-
-        Args:
-            frame: BGR uint8 array of shape (H, W, 3) — OpenCV convention.
-            t_sec: timestamp of this frame in seconds.
-
-        Returns:
-            A float in [0, 1]. Skipping frames internally and returning the
-            previous score is fine; the harness still expects a value for
-            every call.
-        """
-        # TODO: replace this stub. A simple strong baseline: track vehicles,
-        # estimate time-to-collision between pairs, map min TTC -> risk.
-        return self.last_score
+RiskEstimator = risk.RiskEstimator

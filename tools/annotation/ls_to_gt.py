@@ -1,6 +1,7 @@
 # ls_to_gt.py — Label Studio JSON export -> ground_truth.json
 # usage: python ls_to_gt.py export_events_A.json gt_A.json [--user ID_или_email] [--all]
-import argparse, json
+import argparse
+import json
 
 FPS_DEFAULT = 30000 / 1001
 
@@ -43,7 +44,8 @@ def ls_to_gt(export_path, out_path, user=None, take_all=False):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("export"); ap.add_argument("out")
+    ap.add_argument("export")
+    ap.add_argument("out")
     ap.add_argument("--user", help="id или e-mail аннотатора (поле completed_by)")
     ap.add_argument("--all", action="store_true", help="взять все аннотации задачи, а не последнюю")
     args = ap.parse_args()
