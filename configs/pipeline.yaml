@@ -150,5 +150,6 @@ risk:                          # Part B
   release_r: 0.3
   max_alarm_s: 8.0
   mute_s: 10.0
+  budget_guard: true           # выключать Part B, если прогноз времени выходит за 3x (в демо не нужно)
   deadline_margin_s: 10.0
   decay: 0.9

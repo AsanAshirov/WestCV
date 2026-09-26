@@ -88,7 +88,7 @@ class RiskEstimator:
         now = time.perf_counter()
         if self.t_first is None:
             self.t_first = now
-        elif self.enabled and self.k % 32 == 0:
+        elif self.enabled and RCFG["budget_guard"] and self.k % 32 == 0:
             rate = (now - self.t_first) / self.k  # includes the harness's own decoding
             if now + rate * (self.n_frames - self.k) > self.deadline:
                 self.enabled = False

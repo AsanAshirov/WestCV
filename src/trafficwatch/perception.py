@@ -29,6 +29,7 @@ class Perception:
     times: np.ndarray            # (F,) seconds of analysed frames
     dets: np.ndarray             # (M, 7): k (index into times), x1, y1, x2, y2, conf, sc
     complete: bool               # False if the time budget stopped the pass early
+    brightness: np.ndarray | None = None  # (F,) mean grey level of each analysed frame (EDA)
 
     @property
     def duration(self) -> float:
@@ -39,23 +40,29 @@ class Perception:
         return self.stride / self.fps
 
     def save(self, path: str | Path) -> None:
-        np.savez_compressed(path, times=self.times, dets=self.dets, meta=np.array([
+        extra = {} if self.brightness is None else {"brightness": self.brightness}
+        np.savez_compressed(path, times=self.times, dets=self.dets, **extra, meta=np.array([
             self.video_id, self.fps, self.n_frames, self.frame_w, self.frame_h, self.stride, self.complete], object))
 
     @classmethod
     def load(cls, path: str | Path) -> "Perception":
         z = np.load(path, allow_pickle=True)
         vid, fps, n, w, h, stride, complete = z["meta"].tolist()
-        return cls(vid, float(fps), int(n), int(w), int(h), int(stride), z["times"], z["dets"], bool(complete))
+        brightness = z["brightness"] if "brightness" in z.files else None
+        return cls(vid, float(fps), int(n), int(w), int(h), int(stride), z["times"], z["dets"], bool(complete),
+                   brightness)
 
 
 def perceive(meta: VideoMeta, detector: Detector, cfg: dict, deadline: float | None = None,
-             on_progress: Callable[[float], None] | None = None) -> Perception:
+             on_progress: Callable[[float], None] | None = None,
+             on_frame: Callable[[float, np.ndarray], None] | None = None) -> Perception:
+    """`on_frame(t, frame)` sees every analysed frame in order (the demo uses it to run
+    Part B and keep small preview frames without decoding the video twice)."""
     dcfg = cfg["decode"]
     stride = max(1, int(round(meta.fps / dcfg["analysis_fps"])))
     w, h = analysis_size(meta, dcfg["width"])
     batch_size = cfg["detector"]["batch"]
-    times, rows, frames, idxs = [], [], [], []
+    times, rows, frames, idxs, brightness = [], [], [], [], []
     complete = True
 
     def flush():
@@ -70,6 +77,9 @@ def perceive(meta: VideoMeta, detector: Detector, cfg: dict, deadline: float | N
     source = iter_frames(meta, stride, w, dcfg["backend"], tuple(dcfg.get("ffmpeg_input_args") or ()))
     with contextlib.closing(source):
         for idx, frame in source:
+            brightness.append(float(frame[::4, ::4].mean()))
+            if on_frame:
+                on_frame(idx / meta.fps, frame)
             frames.append(frame)
             idxs.append(idx)
             if len(frames) == batch_size:
@@ -83,7 +93,8 @@ def perceive(meta: VideoMeta, detector: Detector, cfg: dict, deadline: float | N
         flush()
     dets = np.vstack(rows) if rows else np.zeros((0, 7), np.float32)
     return Perception(meta.video_id, meta.fps, meta.n_frames, w, h, stride,
-                      np.asarray(times, np.float64), dets, complete)
+                      np.asarray(times, np.float64), dets, complete,
+                      np.asarray(brightness[:len(times)], np.float32))
 
 
 def track(perception: Perception, tracker_cfg: dict) -> np.ndarray:

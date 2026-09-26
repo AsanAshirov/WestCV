@@ -1,0 +1,16 @@
+# Настройки для live-демо на CPU (Hugging Face Space). Всё, что не указано, берётся из pipeline.yaml.
+extends: pipeline.yaml
+
+decode:
+  analysis_fps: 5
+  width: 960
+
+detector:
+  weights: weights/yolo26n.pt
+  imgsz: 960
+  batch: 4
+
+risk:
+  require_cuda: false
+  fps: 5
+  budget_guard: false
