@@ -186,16 +186,62 @@ kaggle kernels output <ваш_логин>/antigradient-samples-t4 -p kaggle_out
 - **Финальный `predictions_samples.json` брать из прогона финального коммита.**
 - Ничего не публиковать: датасеты создаются без `--public`, ядро с `is_private: true`.
 
-## 11. Сдача (до 21:00 воскресенья)
+## 11. Сайт и live-демо (25% отбора)
+
+Рубрика сайта: live-демо 30%, визуализации сэмплов 20%, EDA 15%, подход и отчёт 15%, команда 10%, дизайн 10%.
+Всё уже свёрстано в `site/` (главная `index.html` + `report.html`). Данные для графиков и картинок собираются
+одной командой из результатов прогона на T4; сам сайт статический (GitHub Pages).
+
+**1. Данные сайта** (после §10, из финального прогона):
+```bash
+python tools/build_site_data.py --cache kaggle_out/cache --pred kaggle_out/predictions_samples.json \
+    --gt dev_labels/dev_gt.json --videos DataSets [--video-urls site/videos.json]
+```
+- Пишет `site/data/site.json`, тепловые карты, поле направлений и по кадру на каждое событие (с рамками треков).
+- `--videos` нужен для кадров событий и таблицы кодеков; `--gt` — для сравнения с разметкой и таблицы F1.
+- `site/data/` коммитим (≈10–20 МБ). Локально посмотреть: `python -m http.server -d site 8000` → http://localhost:8000
+  (открывать через сервер, а не двойным кликом: `fetch` из `file://` не работает).
+
+**2. Команда и ссылки** — `site/config.json`:
+- `team`: имя, роль, фото (`assets/team/<имя>.jpg`, квадрат ~400 px), GitHub/LinkedIn, 2–4 пункта «что сделал».
+  Пустые записи не показываются. Это 10% сайта за полчаса работы.
+- `space_url` — страница Space (`https://huggingface.co/spaces/<user>/antigradient-demo`),
+  `space_embed` — сам апп (`https://<user>-antigradient-demo.hf.space`), он встраивается в страницу.
+- Тот же состав команды вписать в таблицу Team в `README.md`.
+
+**3. Демо на Hugging Face Space** (Gradio 6.28.0, CPU):
+```bash
+bash tools/build_space.sh                               # собирает dist/space: app.py, src/, configs/, yolo26n.pt
+pip install -U huggingface_hub && hf auth login
+hf repos create <user>/antigradient-demo --type space --space-sdk gradio --public   # CLI huggingface_hub 2.x
+hf upload <user>/antigradient-demo dist/space . --repo-type space
+```
+- С июля 2026 новый Gradio Space требует PRO (или платное железо CPU Upgrade, $0.03/ч). Бесплатный CPU basic
+  засыпает после простоя — перед проверкой открыть Space, чтобы он проснулся.
+- Проверить: загрузить 30-секундный кусок сэмпла (`ffmpeg -i C3896.MP4 -t 30 -map 0:v:0 -c copy clip.mp4`).
+- Локально то же самое: `python app/app.py` → http://127.0.0.1:7860.
+
+**4. (Необязательно) review-видео на сайте.** Если выложить `review/*_review.mp4` в HF dataset
+(`hf repos create <user>/antigradient-media --type dataset --public`, затем `hf upload <user>/antigradient-media review . --repo-type dataset`) и записать в `site/videos.json`
+`{"C3896.MP4": "https://huggingface.co/datasets/<user>/antigradient-media/resolve/main/C3896.MP4_review.mp4", ...}`,
+то на сайте вместо кадров будет плеер, а клик по событию перематывает видео. Без этого работают кадры событий.
+
+**5. Публикация.** Settings → Pages → Source: **GitHub Actions**. Workflow `.github/workflows/pages.yml` выкладывает
+`site/` при каждом пуше в `main`, затрагивающем `site/`. Адрес: `https://<owner>.github.io/WestCV/`.
+- Pages для **приватного** репозитория доступен только на платном плане GitHub; к сдаче репозиторий и так должен быть открыт.
+- Сайт, Space и репозиторий — публичные по условиям задания. Приватными остаются Kaggle-ноутбуки и датасеты (§10).
+  Space содержит только код и `yolo26n.pt`, никаких видео.
+
+## 12. Сдача (до 21:00 воскресенья)
 
 - [ ] `pytest` зелёный, `evaluate.py --validate-only` → VALID.
 - [ ] `predictions_samples.json` в корне, получен финальным кодом на T4.
-- [ ] README: команда, кто что сделал, ссылка на сайт.
+- [ ] README: команда, кто что сделал, ссылка на сайт. `site/config.json` заполнен, `site/data/` из финального прогона.
 - [ ] `research/` убрать или вынести из репозитория (рубрика «no dead code»).
 - [ ] `git tag v1.0 && git push origin v1.0`. После тега ничего не менять.
 - [ ] Ссылка на репозиторий (тег) и на сайт отправлена в форме хакатона.
 
-## 12. Если что-то сломалось
+## 13. Если что-то сломалось
 
 | Симптом | Что делать |
 |---|---|

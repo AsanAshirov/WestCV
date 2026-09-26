@@ -52,6 +52,8 @@ Other classes are not predicted: a class predicted but absent from the test set 
 | `weights/` | Model weights, `download.sh`, `SHA256SUMS` |
 | `tools/` | Development tools: decode benchmark, perception cache, rule tuning, review video, labels → ground truth |
 | `tests/` | Unit tests and synthetic-trajectory tests for every rule and for Part B |
+| `app/` | Live demo (Gradio): same pipeline with a smaller detector; `tools/build_space.sh` packages it for Hugging Face Spaces |
+| `site/` | Project website (GitHub Pages): results on the samples, EDA, approach, report, team; data from `tools/build_site_data.py` |
 | `run_submission.py`, `evaluate.py` | Organizers' harness and metric, unchanged |
 | `docs/RUNBOOK_RU.md` | Step-by-step team runbook (Russian) |
 | `docs/WestCV_plan_RU.pdf` | Analysis and plan (Russian) |

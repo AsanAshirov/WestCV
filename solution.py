@@ -18,6 +18,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from trafficwatch import env  # noqa: E402,F401  (offline mode before torch/ultralytics)
+
+# isort: split
 from trafficwatch import pipeline, risk  # noqa: E402
 
 # Official class ids (14). Classes we never predict stay in the list: that is allowed

@@ -31,6 +31,8 @@ import numpy as np  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 
 from trafficwatch import env  # noqa: E402,F401
+
+# isort: split
 from trafficwatch import pipeline, risk, viz  # noqa: E402
 from trafficwatch.perception import perceive  # noqa: E402
 from trafficwatch.video import analysis_size, ffmpeg_exe, read_meta  # noqa: E402
@@ -111,7 +113,7 @@ def analyze(file: str | None, progress=gr.Progress()):
             path, trimmed = _trim(file, workdir)
             meta = read_meta(path)
         except Exception:
-            raise gr.Error("This file could not be read as a video. Upload an .mp4 or .mov (H.264 or HEVC).")
+            raise gr.Error("This file could not be read as a video. Upload an .mp4 or .mov (H.264 or HEVC).") from None
         if meta.duration < 2 or meta.n_frames < 10:
             raise gr.Error("The video is shorter than 2 seconds.")
 
@@ -161,7 +163,7 @@ def analyze(file: str | None, progress=gr.Progress()):
         raise
     except Exception as exc:  # never show a stack trace to a visitor
         pipeline.log(f"demo failed: {exc!r}")
-        raise gr.Error(f"Processing failed: {type(exc).__name__}. Try a shorter or re-encoded clip.")
+        raise gr.Error(f"Processing failed: {type(exc).__name__}. Try a shorter or re-encoded clip.") from None
 
 
 INTRO = f"""

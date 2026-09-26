@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antigradient Technical Report</title>
+<meta name="description" content="Technical report of team Antigradient, WIUT Hackathon 2026 Computer Vision track: method, time budget, evaluation, limitations, reproducibility.">
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&family=Overpass+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="report">
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img class="brand-mark" src="assets/mark.svg" alt=""><span>Antigradient</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="index.html#demo">Demo</a>
+      <a href="index.html#samples">Samples</a>
+      <a href="index.html#eda">EDA</a>
+      <a href="index.html#approach">Approach</a>
+      <a href="report.html" aria-current="true">Report</a>
+      <a href="index.html#team">Team</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap report">
+  <nav aria-label="Report contents">
+    <div class="eyebrow">Contents</div>
+    <ol>
+      <li><a href="#task">Task and metric</a></li>
+      <li><a href="#data">Data</a></li>
+      <li><a href="#method">Method</a></li>
+      <li><a href="#partb">Accident risk (Part B)</a></li>
+      <li><a href="#budget">Time budget</a></li>
+      <li><a href="#results">Evaluation</a></li>
+      <li><a href="#decisions">Decisions</a></li>
+      <li><a href="#limits">Limitations</a></li>
+      <li><a href="#repro">Reproducing</a></li>
+      <li><a href="#licences">Data and licences</a></li>
+    </ol>
+  </nav>
+
+  <article>
+    <div class="eyebrow">Technical report · team Antigradient</div>
+    <h1>Traffic events and accident risk from a fixed road camera</h1>
+    <p>We detect and track every road user in the video and derive events from the trajectories with one rule per
+      class. Part B estimates, causally, the probability that an accident starts within five seconds from the
+      time to collision between tracked pairs. Nothing is trained on the competition camera: the detector is a
+      pretrained COCO model, and every threshold is a physical quantity in seconds or in box sizes, tuned on our
+      own labels of the four sample videos.</p>
+
+    <h2 id="task">1. Task and metric</h2>
+    <p><b>Part A</b> returns, for each video, a list of segments <code>[start_s, end_s, class]</code> over 14 classes.
+      Score A is macro-F1: for each class and each temporal-IoU threshold 0.3, 0.5 and 0.7, predictions are matched
+      one to one with the ground truth by descending tIoU, TP/FP/FN are pooled over all videos, and the F1 values are
+      averaged. The set of classes is the union of the classes in the ground truth and in our predictions.</p>
+    <p>That union matters. A class present in the test set enters the average whatever we do, so predicting it can
+      only help. A class absent from the test set enters the average, with F1 = 0, as soon as we predict it once. With
+      five other classes averaging 0.5, one false alarm of an absent class lowers Score A from 0.50 to 0.42. We predict
+      a class only when its rule produces no false alarm on any sample video.</p>
+    <p><b>Part B</b> is a stream: the harness calls <code>step(frame, t)</code> for each frame in order and we return
+      a probability. Score B = 0.4·AP + 0.4·F1<sub>alarm</sub> + 0.2·mTTA/10, where AP is computed over frames (the 5 s
+      before each accident are positive; AP is normalised so that a constant gets zero) and alarms are runs of
+      scores ≥ 0.5. The model score is M = 0.7·A + 0.3·B, or M = A when the test set has no accidents.</p>
+    <p><b>Limits.</b> One T4 GPU, 8 CPU cores, no internet, and Part A plus Part B must finish within three times the
+      video's length. A video that runs over scores zero in both parts.</p>
+
+    <h2 id="data">2. Data</h2>
+    <p>The organizers provided four sample clips from one fixed camera: 3840×2160, 29.97 fps, H.264 High 4:2:2 10-bit
+      at about 140 Mb/s. The full table, with the traffic measured in each clip, is on the
+      <a href="index.html#eda">EDA section</a> of the main page. Two properties shaped the design:</p>
+    <ul>
+      <li>The T4's hardware decoder (NVDEC) does not support H.264 4:2:2, so every frame is decoded on the CPU. At 4K
+        this costs roughly one video length per pass on 8 cores. The harness already spends one pass reading frames for
+        Part B, so Part A gets a single further pass at most.</li>
+      <li>The camera never moves, so the lanes, their directions and the places where people cross can be learned from
+        the video itself. We drew only the pedestrian crossings by hand, once, on a median frame.</li>
+    </ul>
+    <p>We labelled the sample videos ourselves, following the start and end conventions the task description gives
+      for each class, and used them as the development set. We used no
+      other dataset: the pretrained detector already covers the road users we need, and footage from other cameras
+      would teach camera-specific habits that do not transfer.</p>
+
+    <h2 id="method">3. Method</h2>
+    <h3>3.1 Decoding and detection</h3>
+    <p>One sequential ffmpeg process decodes the video and scales it to 1280 px wide, keeping every third frame
+      (about 10 fps). Scaling inside ffmpeg halves the cost of copying 4K frames into Python. The detector is YOLO26m
+      with COCO weights at 1280 px, FP16, batch 8. COCO classes are folded into four groups (vehicle, two-wheeler,
+      person, animal) with non-maximum suppression inside each group, so a truck also detected as a car counts
+      once.</p>
+    <h3>3.2 Tracking</h3>
+    <p>Our tracker follows ByteTrack: high-confidence detections are matched to tracks by IoU first, then leftover
+      tracks try the low-confidence detections, which keeps people and cars through partial occlusion. Unlike the
+      reference implementation, lifetimes are in seconds (a lost track survives 3 s), so behaviour does not change
+      with the analysis frame rate.</p>
+    <h3>3.3 Track repair and kinematics</h3>
+    <p>A track whose centre jumps more than 2.5 box sizes within half a second is cut in two: that is an identity
+      switch, not motion. A stationary object hidden by a passing bus and found again at the same place is stitched
+      back into one track, which matters for stopped vehicles. Positions are smoothed and speeds are measured in
+      <b>box sizes per second</b>, where the box size is √(w·h). A car's box size is 2–3 m wherever it is in the
+      frame, so one threshold works in the foreground and near the horizon.</p>
+    <h3>3.4 Scene maps</h3>
+    <p>From each video we build a grid of where moving vehicles drive (the carriageway) and a field of their mean
+      direction per cell. Cells where the direction is coherent define the lane direction that the wrong-way and
+      congestion rules compare against. The hand-drawn crossings, sidewalks and islands from
+      <code>configs/scene.json</code> are added on top.</p>
+    <h3>3.5 Rules</h3>
+    <p>Each class is one module in <code>src/trafficwatch/rules/</code>. The current rules and their thresholds are
+      listed in the <a href="index.html#approach">class table</a>. They share a pattern: a per-frame condition on
+      tracks and scene maps, then runs of that condition with gap filling and a minimum duration. The two hardest
+      distinctions are handled explicitly: a stopped vehicle versus a car waiting at a red light (does traffic in the
+      same direction keep passing it?), and congestion versus a normal red-light queue (does it last longer than one
+      signal cycle?).</p>
+    <h3>3.6 Segments</h3>
+    <p>Segments of one class are merged across short gaps, segments shorter than the class minimum are dropped, and
+      the result is rounded to milliseconds and clipped to the video length exactly as the harness does, so no
+      segment is silently discarded by the scorer.</p>
+
+    <h2 id="partb">4. Accident risk (Part B)</h2>
+    <p>Part B sees only the frames the harness has already passed to it; it shares no data with Part A. It runs its
+      own YOLO26n at 640 px on every third frame and its own tracker instance. For every pair of tracks that includes a
+      vehicle and is within six box sizes, it extrapolates both at constant velocity for 3 s and finds when the lower
+      30% of their boxes (a proxy for the footprint on the road) first overlap: the time to collision.</p>
+    <p>The output has two channels, because the metric rewards two things:</p>
+    <ul>
+      <li><b>Ranking (below 0.5)</b> rises as the time to collision falls from 2.5 s to 0.5 s, halved unless it has
+        been falling for three consecutive steps. This feeds AP without triggering alarms.</li>
+      <li><b>Alarm (0.5 and above)</b> is raised only for a pair with a consistent conflict and a time to collision under
+        1 s, lasts at most 8 s, and the pair is then muted for 10 s. Each false alarm costs alarm precision, so alarms
+        are rare by design.</li>
+    </ul>
+
+    <h2 id="budget">5. Time budget</h2>
+    <p>Before Part A starts, we time how long the harness's own frame loop will take on the current machine by reading
+      45 frames the way the harness does, giving <i>h</i> in video lengths. Part A then allows itself</p>
+    <pre>T_A = (3 − 1.25·h − 0.25) × duration</pre>
+    <p>where 1.25 covers the harness reads plus our <code>step()</code> and 0.25 is a safety margin. If less than one
+      video length would remain, Part B is switched off for that video and its reading cost is recomputed without our
+      model. Part A checks the clock before each batch and predicts whether the next one would overrun; Part B projects
+      its finish time every 32 frames and switches itself off if needed. Both brakes are logged, and they are the only
+      decisions that depend on wall-clock time.</p>
+
+    <h2 id="results">6. Evaluation</h2>
+    <p>Timing and scores on the sample videos, from the official harness and <code>evaluate.py</code> on a T4. The
+      thresholds were tuned on these same videos, so the scores overstate what to expect on the test set; the timing
+      numbers transfer directly.</p>
+    <div id="report-results"></div>
+
+    <h2 id="decisions">7. Decisions</h2>
+    <ul>
+      <li><b>No training.</b> With four clips from one camera, a trained event classifier would learn those clips. Rules
+        on tracks use quantities we can check by eye on the review video, and each threshold has a physical meaning.</li>
+      <li><b>Fewer classes, no false classes.</b> Nine classes need information we cannot extract reliably (signal
+        phase, lane markings, allowed manoeuvres, smoke). Predicting them would add zeros to the average.</li>
+      <li><b>One decode pass.</b> CPU decoding of 4K 4:2:2 is the bottleneck; everything in Part A is fed from a single
+        sequential pass at 10 fps.</li>
+      <li><b>Determinism.</b> Fixed seeds, deterministic cuDNN, sequential decoding, fixed batch size and sorted
+        iteration: the same video gives the same events, except when a time brake fires.</li>
+    </ul>
+
+    <h2 id="limits">8. Limitations</h2>
+    <ul>
+      <li>Everything is measured in the image plane. Occlusion at the far end of the scene and perspective near the
+        horizon make speeds and contacts less reliable there.</li>
+      <li>Jaywalking depends on the hand-drawn crossings; without them the class switches itself off. A camera
+        that moves would need them redrawn.</li>
+      <li>Accidents are detected from an abrupt stop in contact with another road user. A slow scrape or a collision
+        hidden behind a bus will be missed.</li>
+      <li>Time to collision assumes constant velocity over the next 3 s, so turning vehicles produce both late and false
+        conflicts.</li>
+      <li>We could only test the lighting and weather that appear in the four samples. Other conditions may need
+        different detector confidence thresholds.</li>
+    </ul>
+
+    <h2 id="repro">9. Reproducing</h2>
+    <pre>git clone <span data-repo-text>https://github.com/AsanAshirov/WestCV</span>
+cd WestCV
+pip install -r requirements.txt        # Python 3.10–3.13, CUDA 12.6 wheels
+python run_submission.py --videos /data/test --out predictions.json --team Antigradient
+python evaluate.py --pred predictions.json --validate-only
+python -m pytest -q tests              # unit and synthetic-trajectory tests, no video needed</pre>
+    <p>The weights are committed in <code>weights/</code>, with SHA-256 sums. The code never downloads anything at run
+      time: <code>src/trafficwatch/env.py</code> sets the offline flags before any model library is imported. All
+      thresholds live in <code>configs/pipeline.yaml</code>.</p>
+
+    <h2 id="licences">10. Data and licences</h2>
+    <ul>
+      <li>Ultralytics YOLO26m and YOLO26n weights and library, AGPL-3.0. The repository is AGPL-3.0 as a consequence.</li>
+      <li>COCO 2017, through the pretrained weights only: annotations CC BY 4.0, images under Flickr terms.</li>
+      <li>The organizers' sample videos, under the competition terms. They are not in the repository; frames from them
+        appear on this site as results.</li>
+      <li>FFmpeg through imageio-ffmpeg, run as a separate process; OpenCV, NumPy, SciPy and PyYAML.</li>
+    </ul>
+  </article>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Team Antigradient · WIUT Hackathon 2026 · code under AGPL-3.0</span>
+    <span id="build-info"></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script src="assets/main.js"></script>
+</body>
+</html>

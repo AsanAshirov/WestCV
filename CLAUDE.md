@@ -50,6 +50,9 @@ python tools/csv_to_gt.py dev_labels/labels.csv --videos DataSets --out dev_labe
 python tools/make_reference_frame.py DataSets/C3896.MP4 --out geometry/ref_C3896.png   # для labelme
 python run_submission.py --videos DataSets --out predictions_samples.json --team Antigradient
 python evaluate.py --pred predictions_samples.json --validate-only
+python tools/build_site_data.py --cache cache --pred predictions_samples.json --gt dev_labels/dev_gt.json --videos DataSets
+python -m http.server -d site 8000                                     # просмотр сайта
+ruff check .                                                           # линтер (настройки в ruff.toml), в CI вместе с pytest
 ```
 Альтернативный конфиг: `TW_CONFIG=path/to.yaml` или `run_rules.py --config` (конфиг может начинаться с `extends: pipeline.yaml`).
 
@@ -74,5 +77,5 @@ python evaluate.py --pred predictions_samples.json --validate-only
 - [ ] Подбор порогов через `run_rules.py`; выключить классы с ложными срабатываниями.
 - [ ] Прогон на Kaggle T4, запас по времени ≥ 20%. Сгенерировать там `predictions_samples.json`.
 - [ ] README: команда и кто что сделал. Тег `v1.0` к 21:00 воскресенья.
-- [ ] Сайт с live-демо (25% отбора) — параллельно, отдельный человек.
+- [ ] Сайт с live-демо (25% отбора): вёрстка готова (`site/`), данные — `tools/build_site_data.py`, команда и ссылки — `site/config.json`, демо — `tools/build_space.sh` + `hf upload`. Шаги: RUNBOOK §11.
 - [ ] Перед сдачей убрать `research/` или вынести из репозитория (рубрика «no dead code»).

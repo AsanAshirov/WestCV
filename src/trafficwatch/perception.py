@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import contextlib
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 
@@ -45,7 +45,7 @@ class Perception:
             self.video_id, self.fps, self.n_frames, self.frame_w, self.frame_h, self.stride, self.complete], object))
 
     @classmethod
-    def load(cls, path: str | Path) -> "Perception":
+    def load(cls, path: str | Path) -> Perception:
         z = np.load(path, allow_pickle=True)
         vid, fps, n, w, h, stride, complete = z["meta"].tolist()
         brightness = z["brightness"] if "brightness" in z.files else None

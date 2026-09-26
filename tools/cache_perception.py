@@ -39,7 +39,7 @@ def main() -> None:
         meta = read_meta(path)
         t0 = time.perf_counter()
         per = perceive(meta, detector, pipeline.CFG,
-                       on_progress=lambda f: print(f"\r  {path.name}: {f:5.1%}", end="", flush=True))
+                       on_progress=lambda f, name=path.name: print(f"\r  {name}: {f:5.1%}", end="", flush=True))
         per.save(target)
         took = time.perf_counter() - t0
         print(f"\r{path.name}: {len(per.times)} frames, {len(per.dets)} detections, "

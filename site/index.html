@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antigradient Traffic Watch</title>
+<meta name="description" content="Team Antigradient, WIUT Hackathon 2026, Computer Vision track: traffic events and accident risk from a fixed road camera. Live demo, results on the sample videos, EDA, method and team.">
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&family=Overpass+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="home">
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><img class="brand-mark" src="assets/mark.svg" alt=""><span>Antigradient</span></a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#demo">Demo</a>
+      <a href="#samples">Samples</a>
+      <a href="#eda">EDA</a>
+      <a href="#approach">Approach</a>
+      <a href="report.html">Report</a>
+      <a href="#team">Team</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">WIUT Hackathon 2026 · Computer Vision track · Elimination round</div>
+        <h1>Traffic events from one fixed camera, <em>found on tracks</em></h1>
+        <p class="lede">We detect every road user in the video, follow each one through time, and read the
+          events off their trajectories: a car that stops in a moving lane, a pedestrian on the
+          carriageway, a vehicle against the flow, a jam, a collision. A second, strictly causal model
+          estimates the chance that an accident starts in the next five seconds.</p>
+        <div class="actions">
+          <a class="btn primary" href="#demo">Try the live demo</a>
+          <a class="btn" href="#samples">Results on the samples</a>
+          <a class="btn" href="report.html">Technical report</a>
+        </div>
+        <div class="facts" id="facts">
+          <div class="fact"><b>14</b><span>official event classes</span></div>
+          <div class="fact"><b>3×</b><span>video length: time limit for both parts on one T4</span></div>
+          <div class="fact"><b>0</b><span>images of the test camera used for training</span></div>
+        </div>
+      </div>
+      <figure class="cam" id="hero-cam" hidden>
+        <img id="hero-img" alt="Where road users moved in the first sample video, as a heat map over the scene">
+        <figcaption>
+          <div class="osd top"><span class="live" id="hero-cam-id"></span><span id="hero-cam-res"></span></div>
+          <div class="osd bottom"><span id="hero-cam-caption">Motion heat map: where road users were</span><span id="hero-cam-dur"></span></div>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="band" id="demo">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Live demo</div>
+        <h2>Upload a road video, get the events</h2>
+        <p>The demo runs the same code as our submission. It returns each event as a time segment with a class,
+          an annotated playback with every tracked road user, and the causal accident-risk curve.</p>
+      </div>
+      <div class="demo-notes">
+        <div><b>What to upload</b><p>An .mp4 or .mov from a fixed camera, H.264 or HEVC, up to 2.5 GB. 4K 10-bit
+          4:2:2 files like the competition samples work. The first 2 minutes are analysed.</p></div>
+        <div><b>How long it takes</b><p>The demo server has no GPU, so it runs a smaller detector at 5 frames per
+          second. Expect one to two times the clip length. Progress is shown while it runs.</p></div>
+        <div><b>What you get back</b><p>Annotated video, event timeline, risk curve, a table of events and
+          <code>events.json</code> in the competition format.</p></div>
+      </div>
+      <div id="demo-slot"></div>
+    </div>
+  </section>
+
+  <section class="band" id="samples">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Results on the sample videos</div>
+        <h2>What the model finds on the organizers’ footage</h2>
+        <p>Predictions come from the official harness (<code>run_submission.py</code>) on a T4 GPU. Ground truth is
+          our own labelling of the samples, made with the conventions from the task description. Click an event to
+          jump to it.</p>
+      </div>
+      <div id="samples-slot"></div>
+    </div>
+  </section>
+
+  <section class="band" id="eda">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Exploratory data analysis</div>
+        <h2>The scene, measured by the pipeline</h2>
+        <p>Everything below is computed from our own detections and tracks on the sample videos: how much traffic
+          there is, how fast it moves, where people walk and which way each lane flows. Speeds are in box sizes
+          per second (BS/s), a unit that does not depend on distance from the camera; for a car, 1 BS/s is about
+          9 km/h.</p>
+      </div>
+      <div id="eda-slot"></div>
+    </div>
+  </section>
+
+  <section class="band" id="approach">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Approach</div>
+        <h2>Detector, tracker, rules on trajectories</h2>
+        <p>There is one camera and a few hundred minutes of test video, and a predicted class that never occurs
+          costs as much as missing a real one. We chose components we can check frame by frame: a pretrained
+          detector, our own tracker, and one readable rule per event class, tuned on our labels of the samples.</p>
+      </div>
+      <div class="pipeline panel">
+        <div class="lane-row">
+          <div class="eyebrow">Part A</div>
+          <div class="steps">
+            <div class="step"><b>Decode</b><span>one CPU pass, ffmpeg scales 4K to 1280 px, ~10 fps</span></div>
+            <div class="step"><b>Detect</b><span>YOLO26m, COCO weights, 4 groups: vehicle, two-wheeler, person, animal</span></div>
+            <div class="step"><b>Track</b><span>own ByteTrack: two-stage IoU matching, lifetimes in seconds</span></div>
+            <div class="step"><b>Repair</b><span>cut ID switches, stitch occluded parked cars, speed in BS/s</span></div>
+            <div class="step"><b>Scene</b><span>road mask and lane directions learned from moving cars</span></div>
+            <div class="step"><b>Rules</b><span>one module per class</span></div>
+            <div class="step"><b>Segments</b><span>merge gaps, drop blips, clip to video</span></div>
+          </div>
+        </div>
+        <div class="lane-row">
+          <div class="eyebrow">Part B</div>
+          <div class="steps">
+            <div class="step"><b>Frames</b><span>only those already received, never the future</span></div>
+            <div class="step"><b>Detect</b><span>YOLO26n at 640 px, ~10 fps</span></div>
+            <div class="step"><b>Track</b><span>same tracker, own instance</span></div>
+            <div class="step"><b>Time to collision</b><span>every pair near a vehicle, footprints extrapolated</span></div>
+            <div class="step"><b>Risk</b><span>&lt; 0.5 ranks conflicts; ≥ 0.5 raises an alarm of at most 8 s</span></div>
+          </div>
+        </div>
+      </div>
+      <h3 style="margin-top:36px;margin-bottom:12px">Event classes</h3>
+      <div id="rules-slot"></div>
+      <div class="grid-2" style="margin-top:36px">
+        <div class="stack">
+          <h3>Staying inside the time limit</h3>
+          <p>A video that runs over three times its length scores zero for both parts. The harness itself reads
+            every 4K frame for Part B, so before starting Part A we time a few of those reads on the current machine
+            (<i>h</i>, in video lengths) and give Part A what is left:</p>
+          <div class="formula">T<sub>A</sub> = (3 − <span>1.25·h</span> − 0.25) × duration</div>
+          <p>Part A checks the clock before every batch and stops early rather than overrun. Part B projects its
+            finish time every 32 frames and switches itself off if it would miss the limit.</p>
+        </div>
+        <div class="stack">
+          <h3>Which classes we predict</h3>
+          <p>Score A averages F1 over every class that appears in the ground truth <i>or</i> in our predictions. A
+            class we predict that is not in the test set adds a zero to the average, however few false alarms it
+            has. We only switch a class on when its rule gives no false alarms on all four samples. The other
+            classes need information a box tracker does not have reliably (traffic-light state, lane markings,
+            smoke) and are left off.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="report-link">
+    <div class="wrap grid-2">
+      <div class="stack">
+        <div class="eyebrow">Technical report</div>
+        <h2>Method, evaluation and limits in detail</h2>
+      </div>
+      <div class="stack">
+        <p>The report covers the metric and what it rewards, the data, every stage of the pipeline, the time budget,
+          our evaluation protocol and scores, known failure cases, and how to reproduce the submission.</p>
+        <div class="actions" style="margin-top:4px"><a class="btn primary" href="report.html">Read the report</a>
+          <a class="btn" id="repo-link" href="https://github.com/AsanAshirov/WestCV">Code on GitHub</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="team">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Team</div>
+        <h2>Antigradient</h2>
+      </div>
+      <div class="team" id="team-slot"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Team Antigradient · WIUT Hackathon 2026 · code under AGPL-3.0</span>
+    <span id="build-info"></span>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script src="assets/main.js"></script>
+</body>
+</html>

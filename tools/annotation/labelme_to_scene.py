@@ -1,5 +1,6 @@
 # usage: python labelme_to_scene.py geometry/ref_CLIP01.json scene_CLIP01.json
-import json, sys
+import json
+import sys
 from collections import defaultdict
 
 REQUIRED = {"carriageway", "stop_line", "crosswalk", "lane_dir"}   # подстройте под свою сцену

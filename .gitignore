@@ -53,3 +53,6 @@ geometry/*.png
 Thumbs.db
 .vscode/
 .idea/
+
+# Built artefacts
+dist/
