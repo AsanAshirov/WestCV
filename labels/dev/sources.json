@@ -1,0 +1,34 @@
+{
+ "C3896": {
+  "file": "labels/gt_annotator_b_C3896.json",
+  "who": "annotator_b (job 7)",
+  "classes": "all"
+ },
+ "C3897": {
+  "file": "labels/gt_annotator_b_C3897.json",
+  "who": "annotator_b (job 9)",
+  "classes": "all"
+ },
+ "C3902": {
+  "file": "labels/gt_annotator_c_C3902.json",
+  "who": "friend as annotator_c (job 13)",
+  "classes": "all",
+  "second_opinion": {
+   "file": "labels/gt_admin_C3902.json",
+   "who": "Asan (job 12)",
+   "classes": [
+    "jaywalking"
+   ]
+  }
+ },
+ "C3905": {
+  "file": "labels/gt_annotator_b_C3905.json",
+  "who": "annotator_b (job 3)",
+  "classes": "all",
+  "second_opinion": {
+   "file": "labels/gt_annotator_c_C3905.json",
+   "who": "annotator_c (job 4)",
+   "classes": "all"
+  }
+ }
+}

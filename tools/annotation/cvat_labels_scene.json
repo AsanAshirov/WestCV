@@ -1,0 +1,145 @@
+[
+ {
+  "name": "carriageway",
+  "color": "#4c4c4c",
+  "type": "polygon",
+  "attributes": []
+ },
+ {
+  "name": "island",
+  "color": "#c49c94",
+  "type": "polygon",
+  "attributes": []
+ },
+ {
+  "name": "sidewalk",
+  "color": "#98df8a",
+  "type": "polygon",
+  "attributes": []
+ },
+ {
+  "name": "crosswalk",
+  "color": "#ffffff",
+  "type": "polygon",
+  "attributes": [
+   {
+    "name": "id",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "stop_line",
+  "color": "#d62728",
+  "type": "polyline",
+  "attributes": [
+   {
+    "name": "approach",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "solid_line",
+  "color": "#ffdd00",
+  "type": "polyline",
+  "attributes": []
+ },
+ {
+  "name": "lane_dir",
+  "color": "#1f77b4",
+  "type": "polyline",
+  "attributes": [
+   {
+    "name": "approach",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "queue_zone",
+  "color": "#393b79",
+  "type": "polygon",
+  "attributes": [
+   {
+    "name": "approach",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "traffic_light",
+  "color": "#2ca02c",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "kind",
+    "mutable": false,
+    "input_type": "select",
+    "default_value": "vehicle",
+    "values": [
+     "vehicle",
+     "pedestrian"
+    ]
+   },
+   {
+    "name": "controls",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "restricted_zone",
+  "color": "#9467bd",
+  "type": "polygon",
+  "attributes": [
+   {
+    "name": "rule",
+    "mutable": false,
+    "input_type": "select",
+    "default_value": "no_u_turn",
+    "values": [
+     "no_u_turn",
+     "no_left_turn",
+     "no_right_turn",
+     "no_stopping",
+     "other"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ }
+]

@@ -1,103 +1,83 @@
 """
-solution.py — the ONLY file a team has to implement.
+solution.py — WestCV submission (WIUT Hackathon 2026, CV track).
 
-The organizers' harness (run_submission.py) imports this module and calls:
+detect_events(video_path) -> [[start_sec, end_sec, label], ...]    Part A
+RiskEstimator().reset(meta); .step(frame, t_sec) -> float           Part B
 
-    detect_events(video_path)  -> [[start_sec, end_sec, label], ...]    # Part A
-    RiskEstimator().reset(meta); .step(frame, t_sec) -> float           # Part B (optional)
-
-Keep the names and signatures exactly as they are. Everything else — models,
-tracking, rules, helper modules under src/ — is up to you.
-
-Labels must come from CLASSES. You may REMOVE classes you never predict;
-do not add new ids.
+Part A: YOLO26m (1280 px) detections on every 3rd frame -> ByteTrack -> scene registration against the
+reference view of this intersection -> signal timeline read from the heads facing the camera ->
+per-class rules on tracks, geometry and signals (src/westcv/). Models are loaded and warmed up
+here, at import time, which the harness does not count against a video's time budget.
 """
 from __future__ import annotations
 
-import numpy as np
+import os
+import sys
+import time
+from pathlib import Path
 
-# Official class ids (14). See the task description for definitions and
-# start/end conventions. Remove entries you never predict; never add.
+os.environ.setdefault("YOLO_OFFLINE", "1")
+os.environ.setdefault("YOLO_VERBOSE", "False")
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+
+np.random.seed(0)  # nothing samples at random; fixed anyway
+torch.manual_seed(0)
+
+ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "src"))
+
+from westcv.pipeline import Pipeline  # noqa: E402
+from westcv.risk import RiskRunner  # noqa: E402
+
+# Official class ids. Classes we never predict are removed (allowed by the task FAQ):
+# a class that is predicted but absent from the test set would add a zero to the mean.
 CLASSES: list[str] = [
-    "accident",            # collision between road users / with a fixed object
-    "near_miss",           # sharp braking or swerving to avoid a collision, no contact
-    "red_light",           # crossing the stop line on red
-    "wrong_way",           # driving against the traffic direction / in the oncoming lane
-    "illegal_u_turn",      # U-turn where prohibited
+    "red_light",           # crossing stop line 4 on red (signal head facing the camera)
     "stopped_vehicle",     # stationary on the carriageway >= 10 s, not queued at a signal
     "jaywalking",          # pedestrian on the carriageway outside a crossing
     "failure_to_yield",    # driving through a crossing while a pedestrian is on it
-    "illegal_turn",        # turn from the wrong lane or in a prohibited direction
-    "solid_line_crossing", # lane change / manoeuvre across a solid marking
-    "stop_line",           # stopped past the stop line on red
-    "congestion",          # standstill / crawling traffic across all lanes of a direction
-    "road_obstacle",       # debris, animal or fallen object on the carriageway
-    "fire_smoke",          # visible fire or smoke from a vehicle or on the road
+    "stop_line",           # stopped past stop line 4 on red
+    "congestion",          # many vehicles standing still on the carriageway at once
+    "solid_line_crossing", # driving over the solid divider of approach 4
 ]
 
-# Anticipation horizon used by the metric (seconds). step() should return
-# P(an `accident` starts within the next RISK_HORIZON_SEC seconds).
 RISK_HORIZON_SEC = 5.0
+# the harness budget for Part A + Part B, x video duration; WESTCV_TIME_FACTOR mirrors run_submission.py
+# --time-factor for development runs on slow machines (the brakes below scale with it)
+TIME_FACTOR = float(os.environ.get("WESTCV_TIME_FACTOR", "3.0"))
+TIME_SAFETY = 0.25     # x duration kept free for the harness's own decoding speed varying
+
+_PIPELINE = Pipeline(ROOT, "weights/yolo26m.pt")
+_PIPELINE.det.warmup((360, RiskRunner.WIDTH, 3), imgsz=RiskRunner.WIDTH)  # Part B's input size
+_STARTED: dict[str, float] = {}  # video file name -> when detect_events began (the harness timer)
 
 
 def detect_events(video_path: str) -> list[list]:
-    """Part A — traffic event detection.
-
-    Args:
-        video_path: path to one .mp4 file. You may open it any way you like
-            (OpenCV, decord, PyAV, ffmpeg), read it several times, sample
-            frames, run batched models — anything goes.
-
-    Returns:
-        A list of events, each ``[start_sec, end_sec, label]`` with
-        ``0 <= start_sec < end_sec <= duration`` (floats, seconds from the
-        first frame) and ``label in CLASSES``. Return ``[]`` if nothing
-        happened. Segments of the same class must not overlap.
-
-    A typical pipeline:
-        1. sample frames (every 2nd–5th frame is usually enough),
-        2. detect road users (YOLO / RT-DETR) and track them (ByteTrack),
-        3. turn trajectories + scene layout (lanes, stop line, crossing)
-           into per-frame flags for each class,
-        4. merge consecutive flags into segments, drop blips < 0.5 s,
-           merge gaps < 1 s,
-        5. optionally re-score `accident` / `near_miss` candidates with a
-           learned clip classifier.
-    """
-    # TODO: replace this stub with your pipeline.
-    return []
+    """Part A — traffic event detection."""
+    _STARTED[Path(video_path).name] = time.perf_counter()
+    events = _PIPELINE(video_path, CLASSES)
+    print(f"[westcv] {Path(video_path).name} timing {_PIPELINE.last_timing}", file=sys.stderr, flush=True)
+    return events
 
 
 class RiskEstimator:
-    """Part B — causal accident anticipation (optional, bonus).
+    """Part B — causal accident anticipation (src/westcv/risk.py).
 
-    The harness calls ``reset(meta)`` once per video and then ``step`` for
-    EVERY frame, in order. ``step`` must use only the frames it has seen so
-    far: do not open the video file inside this class, and do not reuse
-    Part A results that were computed with access to future frames.
-    """
+    Every 6th frame the Part A detector (already loaded) runs on the received frame at 640 px, an online
+    tracker follows the road users, and the risk rises when two of them are on a course to contact
+    within about a second (time to collision in box units, closing speed, ordinary lane following and
+    image-plane occlusions excluded) or a vehicle brakes hard next to another road user: the cues
+    the task names. It only uses frames it has received. There is no accident in our samples, so the
+    alarm threshold is set from the false-alarm rate on them; its hit rate cannot be measured here.
+    Only if the video would otherwise overrun its time budget does detection stop (the risk then fades)."""
 
     def reset(self, meta: dict) -> None:
-        """Called once before the first frame of each video.
-
-        meta = {"video_id": str, "fps": float, "width": int, "height": int,
-                "n_frames": int}
-        """
-        self.meta = meta
-        self.last_score = 0.0
+        duration = meta["n_frames"] / meta["fps"]
+        started = _STARTED.get(meta["video_id"], time.perf_counter() - 1.5 * duration)
+        deadline = started + (TIME_FACTOR - TIME_SAFETY) * duration
+        self.runner = RiskRunner(_PIPELINE.det, meta, deadline)
 
     def step(self, frame: np.ndarray, t_sec: float) -> float:
-        """Return P(accident starts within the next RISK_HORIZON_SEC s).
-
-        Args:
-            frame: BGR uint8 array of shape (H, W, 3) — OpenCV convention.
-            t_sec: timestamp of this frame in seconds.
-
-        Returns:
-            A float in [0, 1]. Skipping frames internally and returning the
-            previous score is fine; the harness still expects a value for
-            every call.
-        """
-        # TODO: replace this stub. A simple strong baseline: track vehicles,
-        # estimate time-to-collision between pairs, map min TTC -> risk.
-        return self.last_score
+        return self.runner.step(frame, t_sec)

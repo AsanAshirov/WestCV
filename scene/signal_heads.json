@@ -1,0 +1,32 @@
+{
+ "reference": "median frame of sample C3896 (scene/reference_sift.npz), 3840x2160 pixels",
+ "heads": {
+  "veh_median": {
+   "box": [
+    2289,
+    716,
+    2339,
+    827
+   ],
+   "lamps": [
+    "red",
+    "yellow",
+    "green"
+   ],
+   "note": "vehicle head on the median pole, faces the camera"
+  },
+  "ped_left": {
+   "box": [
+    515,
+    960,
+    555,
+    1037
+   ],
+   "lamps": [
+    "red",
+    "green"
+   ],
+   "note": "pedestrian head on the left pole, faces the camera"
+  }
+ }
+}

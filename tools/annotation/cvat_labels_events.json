@@ -1,0 +1,361 @@
+[
+ {
+  "name": "accident",
+  "color": "#d62728",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "near_miss",
+  "color": "#ff7f0e",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "red_light",
+  "color": "#e377c2",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "wrong_way",
+  "color": "#9467bd",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "illegal_u_turn",
+  "color": "#8c564b",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "stopped_vehicle",
+  "color": "#1f77b4",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "jaywalking",
+  "color": "#2ca02c",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "failure_to_yield",
+  "color": "#bcbd22",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "illegal_turn",
+  "color": "#17becf",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "solid_line_crossing",
+  "color": "#7f7f7f",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "stop_line",
+  "color": "#ffbb78",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "congestion",
+  "color": "#393b79",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   },
+   {
+    "name": "h2_only",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "road_obstacle",
+  "color": "#aec7e8",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ },
+ {
+  "name": "fire_smoke",
+  "color": "#636363",
+  "type": "rectangle",
+  "attributes": [
+   {
+    "name": "uncertain",
+    "mutable": false,
+    "input_type": "checkbox",
+    "default_value": "false",
+    "values": [
+     "false"
+    ]
+   },
+   {
+    "name": "note",
+    "mutable": false,
+    "input_type": "text",
+    "default_value": "",
+    "values": [
+     ""
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,13 @@
+{
+  "id": "zakhraluna/westcv-bench-t4",
+  "title": "westcv-bench-t4",
+  "code_file": "bench.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["zakhraluna/westcv-bench"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

@@ -1,2 +1,12 @@
-numpy>=1.24
-opencv-python-headless>=4.8
+# WestCV solution runtime: Python 3.10-3.14, Linux x86_64 (or Windows), NVIDIA GPU with driver >= 525.
+# torch/torchvision are the CUDA 12.6 builds from the PyTorch index (the PyPI default may need a newer driver).
+# One OpenCV package only: Ultralytics depends on opencv-python, so the headless wheel is not used.
+--extra-index-url https://download.pytorch.org/whl/cu126
+numpy>=1.24,<3
+opencv-python==4.13.0.92
+av==18.1.0; python_version >= "3.11"
+av==17.0.0; python_version < "3.11"  # PyAV 18 needs Python 3.11; 17.0.0 decodes the same frames (checked on C3905)
+torch==2.14.0+cu126
+torchvision==0.29.0+cu126
+ultralytics==8.4.163
+lap==0.5.13

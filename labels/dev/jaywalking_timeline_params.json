@@ -1,0 +1,8 @@
+{
+ "label": "jaywalking",
+ "depth_min": 0.1,
+ "zebra_margin": 0.1,
+ "min_speed": 0.0,
+ "gap": 0.5,
+ "min_seg": 3.0
+}

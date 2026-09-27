@@ -1,0 +1,96 @@
+# Separate CVAT instance for WestCV, layered on top of the upstream CVAT v2.76.0 compose file.
+# It does not touch other Docker projects: own project name (westcv-cvat), own container
+# names (westcv_*), own volumes and network (westcv-cvat_*), and Traefik only routes
+# containers of this project.
+#
+# Started by tools/cvat/cvat.sh, which passes:
+#   -p westcv-cvat -f $CVAT_DIR/docker-compose.yml -f tools/cvat/docker-compose.westcv.yml
+# WESTCV_SHARE = folder with the proxy videos, mounted read-only as CVAT "share" storage,
+# so tasks are created from it without uploading the files.
+
+name: westcv-cvat
+
+x-share: &share
+  type: bind
+  source: ${WESTCV_SHARE:?set WESTCV_SHARE to the proxies folder}
+  target: /home/django/share
+  read_only: true
+
+services:
+  cvat_db:
+    container_name: westcv_cvat_db
+  cvat_redis_inmem:
+    container_name: westcv_cvat_redis_inmem
+  cvat_redis_ondisk:
+    container_name: westcv_cvat_redis_ondisk
+  cvat_server:
+    container_name: westcv_cvat_server
+    volumes: [*share]
+    labels:
+      # no Host() match: reachable as localhost, by LAN IP and by Tailscale IP alike
+      traefik.http.routers.cvat.rule: >-
+        PathPrefix(`/api/`) || PathPrefix(`/static/`) || PathPrefix(`/admin`)
+        || PathPrefix(`/django-rq`)
+      # CVAT is reachable from the internet through the tunnel: no self-registration,
+      # accounts are created by the admin (manage.py / admin page)
+      traefik.http.routers.cvat-register.rule: PathPrefix(`/api/auth/register`)
+      traefik.http.routers.cvat-register.entrypoints: web
+      traefik.http.routers.cvat-register.priority: "1000"
+      traefik.http.routers.cvat-register.service: cvat
+      traefik.http.routers.cvat-register.middlewares: westcv-no-register
+      traefik.http.middlewares.westcv-no-register.ipallowlist.sourcerange: 127.0.0.1/32
+  cvat_worker_utils:
+    container_name: westcv_cvat_worker_utils
+    volumes: [*share]
+  cvat_worker_import:
+    container_name: westcv_cvat_worker_import
+    volumes: [*share]
+  cvat_worker_export:
+    container_name: westcv_cvat_worker_export
+    volumes: [*share]
+  cvat_worker_annotation:
+    container_name: westcv_cvat_worker_annotation
+    volumes: [*share]
+  cvat_worker_webhooks:
+    container_name: westcv_cvat_worker_webhooks
+  cvat_worker_quality_reports:
+    container_name: westcv_cvat_worker_quality_reports
+    volumes: [*share]
+  cvat_worker_chunks:
+    container_name: westcv_cvat_worker_chunks
+    volumes: [*share]
+  cvat_worker_consensus:
+    container_name: westcv_cvat_worker_consensus
+    volumes: [*share]
+  cvat_ui:
+    container_name: westcv_cvat_ui
+    labels:
+      traefik.http.routers.cvat-ui.rule: PathPrefix(`/`)
+  traefik:
+    container_name: westcv_cvat_traefik
+    ports: !override
+      - "${WESTCV_CVAT_PORT:-8080}:8080"
+    environment:
+      TRAEFIK_PROVIDERS_DOCKER_NETWORK: westcv-cvat_cvat
+      TRAEFIK_PROVIDERS_DOCKER_CONSTRAINTS: Label(`com.docker.compose.project`,`westcv-cvat`)
+      # keep X-Forwarded-Proto=https from the tunnel so Django's CSRF origin check passes
+      TRAEFIK_ENTRYPOINTS_web_FORWARDEDHEADERS_INSECURE: "true"
+  cvat_opa:
+    container_name: westcv_cvat_opa
+  cvat_clickhouse:
+    container_name: westcv_cvat_clickhouse
+  cvat_vector:
+    container_name: westcv_cvat_vector
+  cvat_grafana:
+    container_name: westcv_cvat_grafana
+
+  # Internet access without port forwarding: Cloudflare quick tunnel (random https URL,
+  # no account). Started only on demand: tools/cvat/cvat.sh tunnel
+  cloudflared:
+    image: cloudflare/cloudflared:2025.9.1
+    container_name: westcv_cvat_tunnel
+    profiles: [tunnel]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --protocol http2 --url http://traefik:8080
+    depends_on: [traefik]
+    networks: [cvat]
