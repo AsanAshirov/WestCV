@@ -19,7 +19,8 @@ python evaluate.py --pred predictions.json --validate-only
 
 After `download.sh` everything runs offline (`YOLO_OFFLINE=1`). Models are loaded and warmed up when
 `solution.py` is imported, before the harness starts a video's timer.
-`predictions_samples.json` is the output of the command above on the four sample videos (Kaggle T4).
+`predictions_samples.json` is the output of `python tools/bench/run_samples.py` (the same harness, one
+video at a time) on the four sample videos; see "Runtime" for how it was produced.
 
 ## Approach
 
@@ -60,10 +61,14 @@ boxes that already overlap in this oblique view are not conflicts) or when a veh
 to another road user. The samples contain no accident, so how early it warns before a real crash could
 not be measured; the filters were chosen from the false alarms on the samples.
 
-**Runtime.** On a Kaggle T4 with 4 vCPUs, Part A takes 1.0–1.2× the video's duration (the first read of
-a file is slower) and the harness's own Part B decode of every 4K frame about 1.4×; our Part B detection
-adds about 0.1× (limit 3× for both). Part A stops decoding at 1.35× duration and the rules run on what
-was decoded. Part B stops detecting only if the projected finish would pass 2.75× duration.
+**Runtime.** On a Kaggle T4 with 4 vCPUs (C3905, clean install from `requirements.txt`), a video takes
+2.6–2.7× its duration in total (limit 3×): Part A 1.05–1.15×, and the harness's own decode of every 4K
+frame for Part B about 1.5×. Part A stops decoding at 1.35× duration and the rules run on what was
+decoded. Part B detects only while the projected finish stays under 2.75× duration; on that 4-vCPU
+machine the harness's decode alone leaves no room, so Part B stops early in the video and the risk fades
+out (the events are unaffected). On a faster machine it runs to the end. `predictions_samples.json` was
+produced on a local GTX 1650 with the budget relaxed (`--time-factor 10`), so it shows the full risk
+curve; its events are identical to the T4 run (checked on C3905).
 
 ## Data and licences
 
